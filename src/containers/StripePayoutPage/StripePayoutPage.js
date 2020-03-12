@@ -136,6 +136,8 @@ export const StripePayoutPageComponent = props => {
     return <NamedRedirect name="StripePayoutPage" />;
   }
 
+  // Failure url should redirect back to Stripe since it's most likely due to page reload
+  // Account link creation will fail if the account is the reason
   if (returnedAbnormallyFromStripe && !getAccountLinkError) {
     handleGetStripeConnectAccountLink('custom_account_verification')();
   }
@@ -159,7 +161,8 @@ export const StripePayoutPageComponent = props => {
             </h1>
             {!currentUserLoaded ? (
               <FormattedMessage id="StripePayoutPage.loadingData" />
-            ) : (returnedAbnormallyFromStripe && !getAccountLinkError) ?
+            )
+             : (returnedAbnormallyFromStripe && !getAccountLinkError) ?
               <FormattedMessage id="StripePayoutPage.redirectingToStripe" />
              : (
                <StripeConnectAccountForm

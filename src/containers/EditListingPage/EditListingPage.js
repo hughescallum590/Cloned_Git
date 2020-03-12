@@ -58,7 +58,9 @@ export const EditListingPageComponent = props => {
     currentUser,
     createStripeAccountError,
     fetchInProgress,
+    fetchStripeAccountError,
     getOwnListing,
+    getAccountLinkError,
     history,
     intl,
     onFetchAvailabilityExceptions,
@@ -81,6 +83,7 @@ export const EditListingPageComponent = props => {
     scrollingDisabled,
     stripeAccountFetched,
     stripeAccount,
+    updateStripeAccountError
   } = props;
 
   const { id, type, returnURLType } = params;
@@ -210,6 +213,10 @@ export const EditListingPageComponent = props => {
           payoutDetailsSaved={page.payoutDetailsSaved}
           stripeAccountFetched={stripeAccountFetched}
           stripeAccount={stripeAccount}
+          stripeAccountError={
+            createStripeAccountError || updateStripeAccountError || fetchStripeAccountError
+          }
+          stripeAccountLinkError={getAccountLinkError}
         />
       </Page>
     );
@@ -275,6 +282,7 @@ const mapStateToProps = state => {
   const page = state.EditListingPage;
   const {
     getAccountLinkInProgress,
+    getAccountLinkError,
     createStripeAccountInProgress,
     createStripeAccountError,
     updateStripeAccountError,
@@ -294,6 +302,7 @@ const mapStateToProps = state => {
   };
   return {
     getAccountLinkInProgress,
+    getAccountLinkError,
     createStripeAccountError,
     updateStripeAccountError,
     fetchStripeAccountError,

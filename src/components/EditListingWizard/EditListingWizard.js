@@ -48,6 +48,9 @@ export const TABS = [
 // Tabs are horizontal in small screens
 const MAX_HORIZONTAL_NAV_SCREEN_WIDTH = 1023;
 
+const STRIPE_ONBOARDING_RETURN_URL_SUCCESS = 'success';
+const STRIPE_ONBOARDING_RETURN_URL_FAILURE = 'failure';
+
 const tabLabel = (intl, tab) => {
   let key = null;
   if (tab === DESCRIPTION) {
@@ -194,7 +197,7 @@ class EditListingWizard extends Component {
   componentDidMount() {
     const { stripeOnboardingReturnURL } = this.props;
 
-    if (stripeOnboardingReturnURL != null) {
+    if (stripeOnboardingReturnURL != null && !this.showPayoutDetails) {
       this.setState({ showPayoutDetails: true });
     }
   }
@@ -263,6 +266,8 @@ class EditListingWizard extends Component {
       fetchStripeAccountError,
       stripeAccountFetched,
       stripeAccount,
+      stripeAccountError,
+      stripeAccountLinkError,
       currentUser,
       ...rest
     } = this.props;
@@ -314,8 +319,8 @@ class EditListingWizard extends Component {
     const rootURL = config.canonicalRootURL;
     const routes = routeConfiguration();
     const { returnURLType, ...pathParams } = params;
-    const successURL = createReturnURL('success', rootURL, routes, pathParams);
-    const failureURL = createReturnURL('failure', rootURL, routes, pathParams);
+    const successURL = createReturnURL(STRIPE_ONBOARDING_RETURN_URL_SUCCESS, rootURL, routes, pathParams);
+    const failureURL = createReturnURL(STRIPE_ONBOARDING_RETURN_URL_FAILURE, rootURL, routes, pathParams);
 
     const accountId = stripeConnected ? stripeAccount.id : null;
     const stripeAccountData = stripeConnected ? getStripeAccountData(stripeAccount) : null;
@@ -336,8 +341,9 @@ class EditListingWizard extends Component {
       }
     );
 
-    const returnedNormallyFromStripe = returnURLType === 'success';
-    const showVerificationError = returnURLType === 'failure';
+    const returnedNormallyFromStripe = returnURLType === STRIPE_ONBOARDING_RETURN_URL_SUCCESS;
+    const returnedAbnormallyFromStripe = returnURLType === STRIPE_ONBOARDING_RETURN_URL_FAILURE;
+    const showVerificationError = returnedAbnormallyFromStripe;
     const showVerificationNeeded = stripeConnected && requirementsMissing;
 
     // Redirect from success URL to basic path for StripePayoutPage
@@ -345,8 +351,15 @@ class EditListingWizard extends Component {
       return <NamedRedirect name="EditListingPage" params={pathParams} />;
     }
 
+    // Failure url should redirect back to Stripe since it's most likely due to page reload
+    // Account link creation will fail if the account is the reason
+    if (returnedAbnormallyFromStripe && !stripeAccountLinkError) {
+      handleGetStripeConnectAccountLink('custom_account_verification')();
+    }
+
     return (
       <div className={classes}>
+        {!returnedAbnormallyFromStripe ?
         <Tabs
           rootClassName={css.tabsContainer}
           navRootClassName={css.nav}
@@ -374,7 +387,7 @@ class EditListingWizard extends Component {
               />
             );
           })}
-        </Tabs>
+        </Tabs> : <div>"foo"</div>}
         <Modal
           id="EditListingWizard.payoutModal"
           isOpen={this.state.showPayoutDetails}
@@ -393,7 +406,9 @@ class EditListingWizard extends Component {
             </p>
             {!currentUserLoaded ? (
               <FormattedMessage id="StripePayoutPage.loadingData" />
-            ) : (
+            ) : (returnedAbnormallyFromStripe && !stripeAccountLinkError) ?
+              <FormattedMessage id="StripePayoutPage.redirectingToStripe" />
+             : (
               <StripeConnectAccountForm
                 disabled={formDisabled}
                 inProgress={payoutDetailsSaveInProgress}
@@ -404,9 +419,7 @@ class EditListingWizard extends Component {
                 submitButtonText={intl.formatMessage({
                   id: 'StripePayoutPage.submitButtonText',
                 })}
-                stripeAccountError={
-                  createStripeAccountError || updateStripeAccountError || fetchStripeAccountError
-                }
+                stripeAccountError={stripeAccountError}
                 stripeAccountFetched={stripeAccountFetched}
                 onChange={onPayoutDetailsFormChange}
                 onSubmit={rest.onPayoutDetailsSubmit}
